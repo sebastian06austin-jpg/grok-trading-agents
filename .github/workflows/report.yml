@@ -16,10 +16,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install dependencies
+          cache: 'pip'
+      - name: Install dependencies (clean & cached)
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt --no-cache-dir
       - run: python main.py
         env:
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
