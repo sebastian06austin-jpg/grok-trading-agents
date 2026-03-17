@@ -117,14 +117,19 @@ def main():
             except Exception as e:
                 print(f"⚠️ Alert failed (non-critical): {e}")
         
-        # Full report as file with CORRECT IST timestamp
+                # Full report as HTML (best format - opens in browser)
         try:
-            with open("latest_report.md", "rb") as f:
+            with open("latest_report.html", "w", encoding="utf-8") as f:
+                f.write(final_report)
+            with open("latest_report.html", "rb") as f:
                 bot.send_document(
                     CHAT_ID,
                     f,
-                    caption=f"📊 Grok Trading Report - {ist_now.strftime('%Y-%m-%d %H:%M IST')}\n\nDownload & read full details (tables, zones, options, education, virtual trades)"
+                    caption=f"📊 Grok Trading Report - {ist_now.strftime('%Y-%m-%d %H:%M IST')}\n\nHTML version - opens in browser (perfect tables & formatting)"
                 )
+                print("✅ HTML report sent")
+        except Exception as e:
+            print(f"⚠️ HTML send failed (non-critical): {e}")
                 print("✅ Full report file sent")
         except Exception as e:
             print(f"⚠️ Document send failed (non-critical): {e}")
