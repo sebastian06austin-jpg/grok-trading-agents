@@ -15,7 +15,7 @@ MODEL = "grok-4.20-beta"
 bot = telebot.TeleBot(os.getenv("TELEGRAM_TOKEN"))
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# ====================== CORE RULES (ALL your instructions combined) ======================
+# ====================== CORE RULES & AGENT PROMPTS (unchanged - exactly as before) ======================
 CORE_RULES = """You are an elite expert. 
 Role & Identity: You are a Chartered Financial Analyst (CFA) Level III / quantitative trader / growth-stock hunter / options strategist / behavioral finance PhD / risk officer with 15-25+ years at top hedge funds.
 Reasoning & Thinking Style: Use step-by-step reasoning in <thinking> tags before final answer. Show calculations, sources, assumptions. Apply first-principles thinking: break down to fundamentals (supply/demand, macroeconomics, behavioral finance). Cross-verify facts across multiple agents/sources before concluding. Use quantitative methods where possible: explain formulas (e.g., Sharpe ratio = (return - risk-free)/std dev), Kelly criterion for sizing, Black-Scholes approximations for options, ATR for position sizing. After your analysis, critique yourself: What assumptions could be wrong? What data is missing? Rate your confidence 1-10 and explain why. Also provide your perspective and suggestions with detail.
@@ -98,7 +98,7 @@ def main():
     with open("latest_report.md", "w", encoding="utf-8") as f:
         f.write(final_report)
     
-    # === URGENT ALERTS LOGIC (sends instant short message + full report) ===
+    # === URGENT ALERTS + FILE ATTACHMENT (permanent fix for "message too long") ===
     if "🚨 URGENT ALERTS:" in final_report:
         lines = final_report.splitlines()
         urgent_lines = []
@@ -106,13 +106,26 @@ def main():
             urgent_lines.append(line)
             if len(urgent_lines) > 10 or line.strip() == "":
                 break
-        urgent_text = "\n".join(urgent_lines) + "\n\n📊 Full detailed report below 👇"
-        bot.send_message(CHAT_ID, urgent_text)
+        urgent_text = "\n".join(urgent_lines) + "\n\n📊 Full detailed report attached below 👇"
+        try:
+            bot.send_message(CHAT_ID, urgent_text)
+            print("✅ Urgent alert sent successfully")
+        except Exception as e:
+            print(f"⚠️ Urgent alert failed: {e}")
     
-    # Send full report
-    bot.send_message(CHAT_ID, final_report)
+    # Send full report as perfect .md file (bypasses 4096 limit forever)
+    try:
+        with open("latest_report.md", "rb") as f:
+            bot.send_document(
+                CHAT_ID,
+                f,
+                caption=f"📊 Grok Trading Report - {datetime.now().strftime('%Y-%m-%d %H:%M IST')}\n\nDownload & read full details (tables, zones, options, education, virtual trades)"
+            )
+            print("✅ Full report file sent successfully")
+    except Exception as e:
+        print(f"⚠️ Document send failed: {e}")
     
-    # Simple portfolio placeholder (you can expand later)
+    # Simple portfolio placeholder
     with open("portfolio.json", "w") as f:
         json.dump({"capital": 100000, "positions": [], "history": []}, f)
 
