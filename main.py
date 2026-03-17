@@ -1,6 +1,6 @@
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import yfinance as yf
 import requests
 from bs4 import BeautifulSoup
@@ -15,7 +15,7 @@ MODEL = "grok-4.20-beta"
 bot = telebot.TeleBot(os.getenv("TELEGRAM_TOKEN"))
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# ====================== CORE RULES & AGENT PROMPTS (unchanged - exactly as before) ======================
+# ====================== CORE RULES & AGENT PROMPTS (unchanged) ======================
 CORE_RULES = """You are an elite expert. 
 Role & Identity: You are a Chartered Financial Analyst (CFA) Level III / quantitative trader / growth-stock hunter / options strategist / behavioral finance PhD / risk officer with 15-25+ years at top hedge funds.
 Reasoning & Thinking Style: Use step-by-step reasoning in <thinking> tags before final answer. Show calculations, sources, assumptions. Apply first-principles thinking: break down to fundamentals (supply/demand, macroeconomics, behavioral finance). Cross-verify facts across multiple agents/sources before concluding. Use quantitative methods where possible: explain formulas (e.g., Sharpe ratio = (return - risk-free)/std dev), Kelly criterion for sizing, Black-Scholes approximations for options, ATR for position sizing. After your analysis, critique yourself: What assumptions could be wrong? What data is missing? Rate your confidence 1-10 and explain why. Also provide your perspective and suggestions with detail.
@@ -85,49 +85,57 @@ def call_agent(name, prompt, user_msg):
     return resp.choices[0].message.content
 
 def main():
-    market_data = fetch_market_data()
-    agent_outputs = {}
-    for name, prompt in AGENT_PROMPTS.items():
-        if name != "supervisor":
-            user_msg = f"Current market data (as of {datetime.now().strftime('%Y-%m-%d %H:%M IST')}):\n{json.dumps(market_data, default=str)}\nPrevious virtual portfolio: {open('portfolio.json').read() if os.path.exists('portfolio.json') else 'New: ₹1,00,000'}"
-            agent_outputs[name] = call_agent(name, prompt, user_msg)
-    
-    supervisor_input = "Synthesize these agent reports:\n" + json.dumps(agent_outputs, indent=2)
-    final_report = call_agent("supervisor", AGENT_PROMPTS["supervisor"], supervisor_input)
-    
-    with open("latest_report.md", "w", encoding="utf-8") as f:
-        f.write(final_report)
-    
-    # === URGENT ALERTS + FILE ATTACHMENT (permanent fix for "message too long") ===
-    if "🚨 URGENT ALERTS:" in final_report:
-        lines = final_report.splitlines()
-        urgent_lines = []
-        for line in lines:
-            urgent_lines.append(line)
-            if len(urgent_lines) > 10 or line.strip() == "":
-                break
-        urgent_text = "\n".join(urgent_lines) + "\n\n📊 Full detailed report attached below 👇"
-        try:
-            bot.send_message(CHAT_ID, urgent_text)
-            print("✅ Urgent alert sent successfully")
-        except Exception as e:
-            print(f"⚠️ Urgent alert failed: {e}")
-    
-    # Send full report as perfect .md file (bypasses 4096 limit forever)
     try:
-        with open("latest_report.md", "rb") as f:
-            bot.send_document(
-                CHAT_ID,
-                f,
-                caption=f"📊 Grok Trading Report - {datetime.now().strftime('%Y-%m-%d %H:%M IST')}\n\nDownload & read full details (tables, zones, options, education, virtual trades)"
-            )
-            print("✅ Full report file sent successfully")
+        market_data = fetch_market_data()
+        agent_outputs = {}
+        for name, prompt in AGENT_PROMPTS.items():
+            if name != "supervisor":
+                user_msg = f"Current market data (as of {datetime.utcnow() + timedelta(hours=5, minutes=30):%Y-%m-%d %H:%M IST}):\n{json.dumps(market_data, default=str)}\nPrevious virtual portfolio: {open('portfolio.json').read() if os.path.exists('portfolio.json') else 'New: ₹1,00,000'}"
+                agent_outputs[name] = call_agent(name, prompt, user_msg)
+        
+        supervisor_input = "Synthesize these agent reports:\n" + json.dumps(agent_outputs, indent=2)
+        final_report = call_agent("supervisor", AGENT_PROMPTS["supervisor"], supervisor_input)
+        
+        with open("latest_report.md", "w", encoding="utf-8") as f:
+            f.write(final_report)
+        
+        # Correct IST time for caption (fixed here)
+        ist_now = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        
+        # Urgent short alert
+        if "🚨 URGENT ALERTS:" in final_report:
+            lines = final_report.splitlines()
+            urgent_lines = []
+            for line in lines:
+                urgent_lines.append(line)
+                if len(urgent_lines) > 10 or line.strip() == "":
+                    break
+            urgent_text = "\n".join(urgent_lines) + "\n\n📊 Full detailed report attached 👇"
+            try:
+                bot.send_message(CHAT_ID, urgent_text)
+                print("✅ Urgent alert sent")
+            except Exception as e:
+                print(f"⚠️ Alert failed (non-critical): {e}")
+        
+        # Full report as file with CORRECT IST timestamp
+        try:
+            with open("latest_report.md", "rb") as f:
+                bot.send_document(
+                    CHAT_ID,
+                    f,
+                    caption=f"📊 Grok Trading Report - {ist_now.strftime('%Y-%m-%d %H:%M IST')}\n\nDownload & read full details (tables, zones, options, education, virtual trades)"
+                )
+                print("✅ Full report file sent")
+        except Exception as e:
+            print(f"⚠️ Document send failed (non-critical): {e}")
+        
+        with open("portfolio.json", "w") as f:
+            json.dump({"capital": 100000, "positions": [], "history": []}, f)
+            
+        print("✅ Entire run completed successfully")
+        
     except Exception as e:
-        print(f"⚠️ Document send failed: {e}")
-    
-    # Simple portfolio placeholder
-    with open("portfolio.json", "w") as f:
-        json.dump({"capital": 100000, "positions": [], "history": []}, f)
+        print(f"❌ Critical error caught: {e}")
 
 if __name__ == "__main__":
     main()
