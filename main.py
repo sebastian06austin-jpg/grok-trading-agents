@@ -96,14 +96,13 @@ def main():
         supervisor_input = "Synthesize these agent reports:\n" + json.dumps(agent_outputs, indent=2)
         final_report = call_agent("supervisor", AGENT_PROMPTS["supervisor"], supervisor_input)
         
-        # Correct IST time (still here - unchanged)
         ist_now = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        filename = f"grok_trading_report_{ist_now.strftime('%Y-%m-%d_%H-%M')}.md"
         
-        # === HTML REPORT (opens perfectly in browser) ===
-        with open("latest_report.html", "w", encoding="utf-8") as f:
+        with open(filename, "w", encoding="utf-8") as f:
             f.write(final_report)
         
-        # Urgent alert (same as before)
+        # Urgent alert
         if "🚨 URGENT ALERTS:" in final_report:
             lines = final_report.splitlines()
             urgent_lines = []
@@ -111,21 +110,21 @@ def main():
                 urgent_lines.append(line)
                 if len(urgent_lines) > 10 or line.strip() == "":
                     break
-            urgent_text = "\n".join(urgent_lines) + "\n\n📊 Full detailed report attached 👇"
+            urgent_text = "\n".join(urgent_lines) + "\n\n📊 Full report attached 👇"
             bot.send_message(CHAT_ID, urgent_text)
         
-        # Send as HTML file
-        with open("latest_report.html", "rb") as f:
+        # Send as clean Markdown file (perfect formatting)
+        with open(filename, "rb") as f:
             bot.send_document(
                 CHAT_ID,
                 f,
-                caption=f"📊 Grok Trading Report - {ist_now.strftime('%Y-%m-%d %H:%M IST')}\n\nHTML version - tap to open in browser (beautiful tables, zones, options, education)"
+                caption=f"📊 Grok Trading Report - {ist_now.strftime('%Y-%m-%d %H:%M IST')}\n\n✅ Tap to open — tables, bold, zones, options & education will look beautiful!\n(Save it if you want)"
             )
         
         with open("portfolio.json", "w") as f:
             json.dump({"capital": 100000, "positions": [], "history": []}, f)
             
-        print("✅ HTML report sent with correct IST time")
+        print("✅ Beautiful Markdown report sent")
         
     except Exception as e:
         print(f"❌ Critical error caught: {e}")
