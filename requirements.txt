@@ -3,5 +3,5 @@ yfinance>=0.2.50
 pandas
 requests
 beautifulsoup4
-python-telegram-bot==21.4
+python-telegram-bot
 python-dotenv
