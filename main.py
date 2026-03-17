@@ -96,13 +96,14 @@ def main():
         supervisor_input = "Synthesize these agent reports:\n" + json.dumps(agent_outputs, indent=2)
         final_report = call_agent("supervisor", AGENT_PROMPTS["supervisor"], supervisor_input)
         
-        with open("latest_report.md", "w", encoding="utf-8") as f:
-            f.write(final_report)
-        
-        # Correct IST time for caption (fixed here)
+        # Correct IST time (still here - unchanged)
         ist_now = datetime.utcnow() + timedelta(hours=5, minutes=30)
         
-        # Urgent short alert
+        # === HTML REPORT (opens perfectly in browser) ===
+        with open("latest_report.html", "w", encoding="utf-8") as f:
+            f.write(final_report)
+        
+        # Urgent alert (same as before)
         if "🚨 URGENT ALERTS:" in final_report:
             lines = final_report.splitlines()
             urgent_lines = []
@@ -111,33 +112,20 @@ def main():
                 if len(urgent_lines) > 10 or line.strip() == "":
                     break
             urgent_text = "\n".join(urgent_lines) + "\n\n📊 Full detailed report attached 👇"
-            try:
-                bot.send_message(CHAT_ID, urgent_text)
-                print("✅ Urgent alert sent")
-            except Exception as e:
-                print(f"⚠️ Alert failed (non-critical): {e}")
+            bot.send_message(CHAT_ID, urgent_text)
         
-                # Full report as HTML (best format - opens in browser)
-        try:
-            with open("latest_report.html", "w", encoding="utf-8") as f:
-                f.write(final_report)
-            with open("latest_report.html", "rb") as f:
-                bot.send_document(
-                    CHAT_ID,
-                    f,
-                    caption=f"📊 Grok Trading Report - {ist_now.strftime('%Y-%m-%d %H:%M IST')}\n\nHTML version - opens in browser (perfect tables & formatting)"
-                )
-                print("✅ HTML report sent")
-        except Exception as e:
-            print(f"⚠️ HTML send failed (non-critical): {e}")
-                print("✅ Full report file sent")
-        except Exception as e:
-            print(f"⚠️ Document send failed (non-critical): {e}")
+        # Send as HTML file
+        with open("latest_report.html", "rb") as f:
+            bot.send_document(
+                CHAT_ID,
+                f,
+                caption=f"📊 Grok Trading Report - {ist_now.strftime('%Y-%m-%d %H:%M IST')}\n\nHTML version - tap to open in browser (beautiful tables, zones, options, education)"
+            )
         
         with open("portfolio.json", "w") as f:
             json.dump({"capital": 100000, "positions": [], "history": []}, f)
             
-        print("✅ Entire run completed successfully")
+        print("✅ HTML report sent with correct IST time")
         
     except Exception as e:
         print(f"❌ Critical error caught: {e}")
