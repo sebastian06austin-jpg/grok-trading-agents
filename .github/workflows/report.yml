@@ -2,7 +2,9 @@ name: Daily Trading Report
 on:
   schedule:
     - cron: '30 2 * * *'   # 8:00 AM IST
-    - cron: '30 12 * * *'  # 6:00 PM IST
+    - cron: '30 8 * * *'   # 2:00 PM IST
+    - cron: '30 14 * * *'  # 8:00 PM IST
+    - cron: '30 20 * * *'  # 2:00 AM IST
   workflow_dispatch:
 jobs:
   run:
